@@ -57,6 +57,51 @@ curl --fail --silent --show-error \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
   >/dev/null
 
+echo "Configuring extension for ${XCA_AGENT_URL}..."
+python3 - "$ROOT_DIR" "$XCA_AGENT_URL" <<'PY'
+import json
+import re
+import shutil
+import sys
+from pathlib import Path
+from urllib.parse import urlparse
+
+root = Path(sys.argv[1])
+raw_url = sys.argv[2]
+parsed = urlparse(raw_url)
+origin = f"{parsed.scheme}://{parsed.netloc}"
+if parsed.scheme != "https" or not parsed.netloc:
+    raise SystemExit("XCA_AGENT_URL must be an https URL")
+
+dist = root / "dist" / "extension"
+if dist.exists():
+    shutil.rmtree(dist)
+dist.parent.mkdir(parents=True, exist_ok=True)
+shutil.copytree(root / "extension", dist)
+
+background_path = dist / "background.js"
+manifest_path = dist / "manifest.json"
+background = background_path.read_text(encoding="utf-8")
+background = re.sub(
+    r'const DEFAULT_AGENT_ORIGIN = ".*?";',
+    f'const DEFAULT_AGENT_ORIGIN = "{origin}";',
+    background,
+)
+background_path.write_text(background, encoding="utf-8")
+
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+permissions = [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://*.workers.dev/*",
+    f"{origin}/*",
+]
+manifest["host_permissions"] = list(dict.fromkeys(permissions))
+manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 "${ROOT_DIR}/scripts/zip-extension.py"
+
 echo "Uploading Worker ${WORKER_NAME}..."
 curl --fail --silent --show-error \
   "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
@@ -64,6 +109,8 @@ curl --fail --silent --show-error \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
   -F "metadata=@${TMP_DIR}/metadata.json;type=application/json" \
   -F "index.js=@${ROOT_DIR}/worker/src/index.js;type=application/javascript+module" \
+  -F "local-ui.js=@${ROOT_DIR}/worker/src/local-ui.js;type=application/javascript+module" \
+  -F "extension-zip.js=@${ROOT_DIR}/worker/src/extension-zip.js;type=application/javascript+module" \
   >/dev/null
 
 echo "Writing LLM_API_KEY secret..."
@@ -93,50 +140,7 @@ curl --fail --silent --show-error \
   --data '{"enabled":true}' \
   >/dev/null
 
-echo "Configuring extension for ${XCA_AGENT_URL}..."
-python3 - "$ROOT_DIR" "$XCA_AGENT_URL" <<'PY'
-import json
-import re
-import shutil
-import sys
-from pathlib import Path
-from urllib.parse import urlparse
-
-root = Path(sys.argv[1])
-raw_url = sys.argv[2]
-parsed = urlparse(raw_url)
-origin = f"{parsed.scheme}://{parsed.netloc}"
-if parsed.scheme != "https" or not parsed.netloc:
-    raise SystemExit("XCA_AGENT_URL must be an https URL")
-
-background_path = root / "extension" / "background.js"
-manifest_path = root / "extension" / "manifest.json"
-
-background = background_path.read_text(encoding="utf-8")
-background = re.sub(
-    r'const DEFAULT_AGENT_ORIGIN = ".*?";',
-    f'const DEFAULT_AGENT_ORIGIN = "{origin}";',
-    background,
-)
-background_path.write_text(background, encoding="utf-8")
-
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-permissions = [
-    "https://x.com/*",
-    "https://twitter.com/*",
-    "https://*.workers.dev/*",
-    f"{origin}/*",
-]
-manifest["host_permissions"] = list(dict.fromkeys(permissions))
-manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-
-dist = root / "dist" / "extension"
-if dist.exists():
-    shutil.rmtree(dist)
-dist.parent.mkdir(parents=True, exist_ok=True)
-shutil.copytree(root / "extension", dist)
-PY
-
 echo "Done."
 echo "Worker URL: ${XCA_AGENT_URL}"
 echo "Extension package: ${ROOT_DIR}/dist/extension"
+echo "Extension zip: ${ROOT_DIR}/dist/xca-extension.zip"

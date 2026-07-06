@@ -1,3 +1,6 @@
+import { EXTENSION_ZIP_HEX } from "./extension-zip.js";
+import { LOCAL_UI_HTML } from "./local-ui.js";
+
 const DEFAULT_LLM_BASE_URL = "https://api.deepseek.com";
 const DEFAULT_LLM_MODEL = "deepseek-v4-pro";
 const DEFAULT_PERSONA = "practical operator, curious builder, concise and natural";
@@ -9,17 +12,17 @@ const STYLE_PRESETS = {
   natural: {
     label: "Natural",
     prompt:
-      "Concise, specific, conversational, and low-drama. Sound like a real person replying under the post."
+      "Natural, concise, human. Light opinion, no performance, no sales tone."
   },
-  founder: {
-    label: "Founder",
+  sharp: {
+    label: "Sharp",
     prompt:
-      "Founder/operator style. Practical, direct, focused on distribution, customer behavior, speed, and tradeoffs."
+      "Sharper and more opinionated, but still respectful. Prefer clear judgment over vague agreement."
   },
-  web3: {
-    label: "Web3",
+  supportive: {
+    label: "Supportive",
     prompt:
-      "Web3 native but not hype-driven. Mention incentives, community, liquidity, trust, or distribution only when relevant."
+      "Supportive and warm. Add one useful observation without sounding flattering or generic."
   },
   technical: {
     label: "Technical",
@@ -30,6 +33,16 @@ const STYLE_PRESETS = {
     label: "Curious",
     prompt:
       "Question-led and thoughtful. Invite conversation without sounding generic or performative."
+  },
+  founder: {
+    label: "Founder",
+    prompt:
+      "Founder/operator style. Practical, direct, focused on distribution, customer behavior, speed, and tradeoffs."
+  },
+  web3: {
+    label: "Web3",
+    prompt:
+      "Web3 native but not hype-driven. Mention incentives, community, liquidity, trust, or distribution only when relevant."
   }
 };
 
@@ -73,6 +86,9 @@ export default {
       if (request.method === "GET" && url.pathname === "/extension") {
         return htmlResponse(renderExtensionHtml(url.origin));
       }
+      if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/extension/xca-extension.zip") {
+        return extensionZipResponse(request.method === "HEAD");
+      }
       if (request.method === "GET" && url.pathname === "/api/extension/info") {
         return jsonResponse(extensionInfo(url.origin));
       }
@@ -91,6 +107,14 @@ export default {
       }
       if (request.method === "POST" && url.pathname === "/api/generate") {
         return jsonResponse(await generateReplies(request, env));
+      }
+      if (request.method === "POST" && url.pathname === "/api/key") {
+        return jsonResponse({
+          configured: Boolean(getApiKey(env)),
+          base_url: getBaseUrl(env),
+          model: getModel(env),
+          message: "Cloudflare deployment uses Worker Secrets for LLM API configuration."
+        });
       }
 
       return jsonResponse({ error: "Not found" }, 404);
@@ -346,6 +370,25 @@ function htmlResponse(html) {
   });
 }
 
+function extensionZipResponse(headOnly = false) {
+  return new Response(headOnly ? null : hexToBytes(EXTENSION_ZIP_HEX), {
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": 'attachment; filename="xca-extension.zip"',
+      "Content-Length": String(EXTENSION_ZIP_HEX.length / 2),
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
+function hexToBytes(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = parseInt(hex.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
+}
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -360,13 +403,34 @@ function extensionInfo(origin) {
     version: EXTENSION_VERSION,
     worker_origin: origin,
     control_panel_url: `${origin}/`,
-    download_url: `${origin}/extension`,
+    download_url: `${origin}/extension/xca-extension.zip`,
     update_check_url: `${origin}/api/extension/info`,
     generate_url: `${origin}/api/generate`
   };
 }
 
 function renderConsoleHtml(origin) {
+  return withExtensionInstall(LOCAL_UI_HTML, origin);
+}
+
+function withExtensionInstall(html, origin) {
+  const installButton = '<a class="secondary" href="/extension" style="text-decoration:none">Install Extension</a>';
+  if (html.includes(installButton)) {
+    return html;
+  }
+  return html.replace(
+    '<button class="secondary" id="configureApi" type="button">Configure API Key</button>',
+    `${installButton}\\n          <button class="secondary" id="configureApi" type="button">Configure API Key</button>`
+  ).replace(
+    "</style>",
+    "    a.secondary { text-decoration: none; }\\n  </style>"
+  ).replace(
+    "</body>",
+    `<script>window.XCA_WORKER_ORIGIN = ${JSON.stringify(origin)};</script>\\n</body>`
+  );
+}
+
+function renderPreviousConsoleHtml(origin) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -615,23 +679,16 @@ function renderExtensionHtml(origin) {
 </head>
 <body>
   <main>
-    <h1>X Comment Agent Extension</h1>
-    <p>The extension reads the opened X page and sends visible post text to this Cloudflare Worker for draft generation.</p>
+    <h1>Install X Comment Agent</h1>
+    <p>Download the extension package from Cloudflare, unzip it, then load it in Chrome.</p>
     <section class="panel">
-      <div class="row"><strong>Version</strong><code>${escapeHtml(info.version)}</code></div>
-      <div class="row"><strong>Worker</strong><code>${escapeHtml(info.worker_origin)}</code></div>
-      <div class="row"><strong>Info API</strong><code>/api/extension/info</code></div>
-    </section>
-    <section class="panel" style="margin-top:14px">
-      <p><strong>Install from Cloudflare</strong></p>
-      <p>Chrome does not allow a normal extension to execute remote extension code. The extension code must be installed locally or through Chrome Web Store. This Cloudflare page provides the live endpoint information the extension reads after installation.</p>
+      <a class="button" href="${escapeHtml(info.download_url)}">Download extension zip</a>
       <ol>
-        <li>Use the package generated by the deployment pipeline.</li>
+        <li>Download and unzip the package.</li>
         <li>Open <code>chrome://extensions</code>.</li>
         <li>Enable Developer mode.</li>
-        <li>Load the unpacked <code>dist/extension</code> folder.</li>
+        <li>Click <code>Load unpacked</code> and select the unzipped folder.</li>
       </ol>
-      <a class="button" href="/">Open Control Panel</a>
     </section>
   </main>
 </body>

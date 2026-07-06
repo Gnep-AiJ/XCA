@@ -10,6 +10,7 @@
     "dev": "wrangler dev",
     "secret:llm": "wrangler secret put LLM_API_KEY",
     "configure:extension": "node scripts/configure-extension.mjs",
+    "zip:extension": "python3 scripts/zip-extension.py",
     "package:extension": "node scripts/package-extension.mjs"
   },
   "devDependencies": {
