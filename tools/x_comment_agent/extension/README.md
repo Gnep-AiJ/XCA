@@ -40,3 +40,15 @@ the local agent project's `.env`; it is not stored in the extension.
 
 For English drafts, each card can show a Chinese reading aid. The `Copy` button
 copies only the English reply text, not the Chinese translation.
+
+## Different Server IP
+
+If your browser is not on the same machine as the agent server, update your
+server IP in both files:
+
+```text
+tools/x_comment_agent/extension/background.js
+tools/x_comment_agent/extension/manifest.json
+```
+
+Then reload the extension in `chrome://extensions`.

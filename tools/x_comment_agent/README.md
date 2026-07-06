@@ -1,33 +1,134 @@
 # X Comment Agent
 
-Local-first assistant for drafting high-signal replies to X posts.
+Local-first agent for drafting X replies from the post you are reading.
 
-This project deliberately avoids the X API and Cloudflare deployment. It runs on
-your own machine or server, reads X page text through the bundled Chrome
-extension, drafts replies with your local LLM API configuration, and leaves final
-posting to you.
+It does not use the X API, does not automate posting, and does not require
+Cloudflare. The Chrome extension reads the visible X page text, sends it to your
+local agent server, and returns reply drafts for you to review and copy.
+
+## Features
+
+- Chrome extension for `x.com` and `twitter.com`
+- Local web UI for LLM configuration and manual drafting
+- Same-language reply generation for Chinese and English posts
+- Chinese reading aid for English drafts; copy only copies the English reply
+- Context-aware mode using visible thread, timeline text, post time, page URL,
+  and image alt text
+- Optional `Context note` for charts, screenshots, memes, or background that the
+  page does not expose as text
+- Custom reply styles in `tools/x_comment_agent/styles.json`
+- No X API, no automatic posting, no hosted backend
+
+## Requirements
+
+- Python 3.10+
+- Chrome or Chromium-based browser
+- An OpenAI-compatible LLM API key
+
+The default config targets DeepSeek:
+
+```text
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-pro
+```
+
+You can also use another OpenAI-compatible provider by changing `LLM_BASE_URL`
+and `LLM_MODEL`.
 
 ## Quick Start
 
 ```bash
 git clone git@github.com:Gnep-AiJ/XCA.git
 cd XCA
-python3 -m tools.x_comment_agent --tweet "Open source agents are becoming the new SaaS distribution layer."
+cp .env.example .env
+```
+
+Edit `.env` and put in your own key:
+
+```text
+LLM_API_KEY=sk-your-api-key
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-pro
+DEEPSEEK_API_KEY=sk-your-api-key
+DEEPSEEK_MODEL=deepseek-v4-pro
+```
+
+Start the local agent:
+
+```bash
+python3 -m tools.x_comment_agent.web --host 0.0.0.0 --port 8765
+```
+
+Open the printed URL, usually:
+
+```text
+http://127.0.0.1:8765/
+```
+
+If the browser is on another machine, open the server LAN IP instead, for
+example:
+
+```text
+http://192.168.31.188:8765/
+```
+
+You can also configure the API key from the web UI with `Configure API Key`.
+
+## Load The Chrome Extension
+
+1. Open `chrome://extensions`.
+2. Enable `Developer mode`.
+3. Click `Load unpacked`.
+4. Select this folder:
+
+```text
+tools/x_comment_agent/extension
+```
+
+Open an X post and click the floating `AI Reply` button.
+
+## Use
+
+1. Start the local agent server.
+2. Open an X post.
+3. Click `AI Reply`.
+4. Optionally open `Context note` and describe images, charts, screenshots, or
+   background.
+5. Click `Generate Reply`.
+6. Review a draft, copy it, and paste it into X manually.
+
+The tool never posts for you.
+
+## Remote Browser Setup
+
+If Chrome is not running on the same machine as the agent server, update both
+files below with your server IP:
+
+```text
+tools/x_comment_agent/extension/background.js
+tools/x_comment_agent/extension/manifest.json
+```
+
+Example endpoint:
+
+```text
+http://192.168.31.188:8765/api/generate
+```
+
+Then reload the extension in `chrome://extensions`.
+
+## CLI
+
+The project also includes a small local CLI:
+
+```bash
+python3 -m tools.x_comment_agent --tweet "AI agents need evals more than demos."
 ```
 
 Read from stdin:
 
 ```bash
-echo "AI agents need evals more than demos." | python3 -m tools.x_comment_agent
-```
-
-Generate more candidates:
-
-```bash
-python3 -m tools.x_comment_agent \
-  --tweet "LangGraph is useful because durable execution matters for real agents." \
-  --count 8 \
-  --persona "technical founder building AI tools"
+echo "Open source agents are becoming distribution channels." | python3 -m tools.x_comment_agent
 ```
 
 JSON output:
@@ -38,148 +139,41 @@ python3 -m tools.x_comment_agent \
   --format json
 ```
 
-## Web UI
-
-Run the local web interface:
-
-```bash
-cd /path/to/XCA
-python3 -m tools.x_comment_agent.web --host 0.0.0.0 --port 8765
-```
-
-Open the printed `http://<ip>:8765` URL in your browser.
-
-Configure LLM in either place:
-
-```text
-UI: Configure API Key
-File: .env
-```
-
-`.env` example:
-
-```text
-LLM_API_KEY=sk-...
-LLM_BASE_URL=https://api.deepseek.com
-LLM_MODEL=deepseek-v4-pro
-DEEPSEEK_API_KEY=sk-...
-DEEPSEEK_MODEL=deepseek-v4-pro
-```
-
-## Chrome Extension
-
-The extension can read the currently opened X post from the browser page and send
-it to the local agent server.
-
-1. Start the web server on port `8765`.
-2. Open `chrome://extensions`.
-3. Enable `Developer mode`.
-4. Click `Load unpacked`.
-5. Select:
-
-```text
-tools/x_comment_agent/extension
-```
-
-Open an X status page and click the floating `XCA` button. The extension reads
-the current post, detects the source language, and automatically generates 5
-drafts in that same language. It only drafts comments; it does not post to X.
-When drafts are in English, the card also shows a Chinese reading aid under the
-reply. The copy button only copies the English reply text.
-
-If your browser is not on the same machine as the agent server, make sure
-`extension/background.js` contains the server URL, for example:
-
-```text
-http://192.168.31.188:8765/api/generate
-```
-
-## Design
-
-The current version is intentionally bounded:
-
-- no X API
-- no automatic posting
-- no Cloudflare deployment
-- local LLM API key only
-- 5 same-language drafts by default
-- Chinese reading aid for English drafts, kept separate from copied text
-- configurable reply styles
-- local rule fallback if DeepSeek is unavailable
-
 ## Reply Styles
 
 Built-in styles:
 
-- `adaptive`: context-aware default; chooses witty, thoughtful, technical, or skeptical tone based on the post and visible context
-- `natural`: concise, human, low-drama
+- `adaptive`: default context-aware style; chooses witty, thoughtful, technical,
+  or skeptical tone based on the post
+- `natural`: concise and human
 - `sharp`: more opinionated, still respectful
 - `supportive`: warm and constructive
-- `technical`: concrete operator/implementation angle
+- `technical`: implementation, metrics, workflow, and tradeoffs
 - `curious`: question-led conversation
 
-Custom styles live in:
+Custom styles live here:
 
 ```text
 tools/x_comment_agent/styles.json
 ```
 
-Add or edit entries there, then reload the Chrome extension if you want the
-style selector to expose a new option.
+Reload the extension after editing styles.
 
-## Generation
+## Safety Boundaries
 
-The agent uses DeepSeek first and falls back to a deterministic local rule engine
-if the API is unavailable. It detects whether the source post is Chinese or
-English and generates replies in that language. The LLM API key is read from
-server-side environment variables or the project `.env`; it is never stored in
-the Chrome extension.
+- No X API
+- No auto-posting
+- No Cloudflare or hosted backend
+- No API key stored in the extension
+- `.env`, databases, logs, zip files, and caches are ignored by Git
 
-DeepSeek default:
-
-```text
-DEEPSEEK_MODEL=deepseek-v4-pro
-```
-
-The server enables high reasoning for `deepseek-v4-pro`. If the model returns
-empty or non-JSON content with thinking enabled, the server retries once with the
-same model and thinking disabled before falling back to local rules.
-
-When the Chrome extension is used on a reply/comment page, it sends the current
-post, visible parent/thread posts, visible timeline text, post time, page URL,
-and image alt/aria text as hidden context. The extension cannot truly inspect
-image pixels by itself; if an image/chart/screenshot matters, add a short note
-in the extension's `Context note` box before generating.
-
-The fallback engine works like this:
-
-1. Clean the source post.
-2. Extract a topic, an anchor phrase, a likely tension, and an execution detail.
-3. Generate replies from natural conversation angles: add-on, question, soft
-   disagreement, operator view, product angle, metric question, or caution.
-4. Score candidates by specificity, length, risk, and whether they reference the
-   source post directly.
-5. Return low-risk drafts for manual review and copying.
-
-Natural reply principle:
-
-```text
-Read the source post first, then draft replies that sound like a real person
-joining the conversation. Anchor the reply to one concrete phrase or tension in
-the post. Prefer one or two short sentences. Avoid slogans, sales language,
-generic praise, excessive certainty, and obvious AI summary style.
-```
-
-The generated replies use five angles:
-
-- agreement with a specific expansion
-- sharp but polite question
-- practical operator insight
-- soft disagreement
-- concise summary or quote-reply style
+The LLM key is stored in your local `.env` when configured through the web UI.
 
 ## Test
 
 ```bash
 python3 -m unittest discover tools/x_comment_agent/tests
+python3 -m py_compile tools/x_comment_agent/web.py tools/x_comment_agent/llm.py tools/x_comment_agent/agent.py tools/x_comment_agent/styles.py tools/x_comment_agent/cli.py
+node --check tools/x_comment_agent/extension/content.js
+node --check tools/x_comment_agent/extension/background.js
 ```
