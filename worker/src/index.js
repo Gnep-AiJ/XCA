@@ -420,7 +420,8 @@ function withExtensionInstall(html, origin) {
   }
   return html.replace(
     '<button class="secondary" id="configureApi" type="button">Configure API Key</button>',
-    `${installButton}\\n          <button class="secondary" id="configureApi" type="button">Configure API Key</button>`
+    `${installButton}
+          <button class="secondary" id="configureApi" type="button">Configure API Key</button>`
   ).replace(
     "</style>",
     "    a.secondary { text-decoration: none; }\\n  </style>"
