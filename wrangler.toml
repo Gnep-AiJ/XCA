@@ -1,0 +1,8 @@
+name = "xca-agent"
+main = "worker/src/index.js"
+compatibility_date = "2026-07-06"
+
+[vars]
+LLM_BASE_URL = "https://api.deepseek.com"
+LLM_MODEL = "deepseek-v4-pro"
+DEFAULT_PERSONA = "practical operator, curious builder, concise and natural"

@@ -1,0 +1,18 @@
+{
+  "name": "xca-cloudflare-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "deploy:one": "node scripts/deploy-one-click.mjs",
+    "deploy:curl": "bash scripts/deploy-with-curl.sh",
+    "dev": "wrangler dev",
+    "secret:llm": "wrangler secret put LLM_API_KEY",
+    "configure:extension": "node scripts/configure-extension.mjs",
+    "package:extension": "node scripts/package-extension.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
