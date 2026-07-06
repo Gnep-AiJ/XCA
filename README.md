@@ -57,12 +57,19 @@ cd xca-cloudflare-agent
 export CLOUDFLARE_ACCOUNT_ID="your-account-id"
 export CLOUDFLARE_API_TOKEN="your-cloudflare-token"
 export LLM_API_KEY="your-llm-api-key"
-export XCA_AGENT_URL="https://your-worker-url.workers.dev"
+export XCA_WORKERS_SUBDOMAIN="your-workers-dev-subdomain"
 bash scripts/deploy-with-curl.sh
 ```
 
 The curl path uses Cloudflare's Worker upload API and Worker secret API directly.
+It also enables the Worker on workers.dev with Cloudflare's Worker subdomain API.
 It does not write credentials into this project.
+
+If you already know the final URL, you can provide it directly:
+
+```bash
+export XCA_AGENT_URL="https://your-worker-url.workers.dev"
+```
 
 ## Deploy
 

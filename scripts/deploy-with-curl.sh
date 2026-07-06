@@ -19,7 +19,16 @@ require_env() {
 require_env CLOUDFLARE_ACCOUNT_ID
 require_env CLOUDFLARE_API_TOKEN
 require_env LLM_API_KEY
-require_env XCA_AGENT_URL
+
+if [[ -z "${XCA_AGENT_URL:-}" && -n "${XCA_WORKERS_SUBDOMAIN:-}" ]]; then
+  XCA_AGENT_URL="https://${WORKER_NAME}.${XCA_WORKERS_SUBDOMAIN}.workers.dev"
+fi
+
+if [[ -z "${XCA_AGENT_URL:-}" ]]; then
+  echo "XCA_AGENT_URL or XCA_WORKERS_SUBDOMAIN is required" >&2
+  echo "Example: XCA_WORKERS_SUBDOMAIN=your-account-subdomain bash scripts/deploy-with-curl.sh" >&2
+  exit 1
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -73,6 +82,15 @@ curl --fail --silent --show-error \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
   -H "Content-Type: application/json" \
   --data @"${TMP_DIR}/secret.json" \
+  >/dev/null
+
+echo "Enabling workers.dev route..."
+curl --fail --silent --show-error \
+  "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain" \
+  -X POST \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  -H "Content-Type: application/json" \
+  --data '{"enabled":true}' \
   >/dev/null
 
 echo "Configuring extension for ${XCA_AGENT_URL}..."
