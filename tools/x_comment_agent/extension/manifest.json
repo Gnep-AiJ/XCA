@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "X Comment Agent",
-  "description": "Draft reply candidates from the currently opened X post through your Cloudflare Worker.",
+  "description": "Draft Chinese and English reply candidates from the currently opened X post.",
   "version": "0.1.0",
   "permissions": [
     "activeTab",
@@ -10,7 +10,9 @@
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
-    "https://*.workers.dev/*"
+    "http://192.168.31.188:8765/*",
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
   ],
   "background": {
     "service_worker": "background.js"

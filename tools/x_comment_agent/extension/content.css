@@ -23,6 +23,8 @@
   justify-content: center;
   gap: 7px;
   padding: 0 12px 0 9px;
+  user-select: none;
+  touch-action: none;
 }
 
 .xca-toggle span {
@@ -43,6 +45,11 @@
 .xca-toggle:hover {
   background: #129766;
   transform: translateY(-1px);
+}
+
+.xca-toggle.dragging {
+  cursor: grabbing;
+  transform: none;
 }
 
 .xca-panel {
@@ -79,6 +86,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 760;
+  letter-spacing: 0;
 }
 
 .xca-close {
@@ -95,6 +103,62 @@
 
 .xca-body {
   padding: 14px;
+}
+
+.xca-field {
+  margin-bottom: 12px;
+}
+
+.xca-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #5f5449;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.xca-textarea,
+.xca-input,
+.xca-select {
+  width: 100%;
+  border: 1px solid #ded7cc;
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #2f2a24;
+  font: 14px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  outline: none;
+}
+
+.xca-textarea {
+  min-height: 126px;
+  resize: vertical;
+  padding: 10px;
+}
+
+.xca-input,
+.xca-select {
+  height: 36px;
+  padding: 0 9px;
+}
+
+.xca-textarea:focus,
+.xca-input:focus,
+.xca-select:focus {
+  border-color: #8a5b3d;
+  box-shadow: 0 0 0 3px rgba(138, 91, 61, 0.14);
+}
+
+.xca-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.xca-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
 .xca-toolbar {
@@ -118,9 +182,20 @@
 }
 
 .xca-button.primary {
+  flex: 1;
   border-color: #8a5b3d;
   background: #8a5b3d;
   color: #fffaf2;
+}
+
+.xca-button.compact {
+  height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.xca-button.danger {
+  color: #9f2d20;
 }
 
 .xca-button:hover:not(:disabled) {
@@ -150,6 +225,29 @@
 .xca-list {
   display: grid;
   gap: 9px;
+}
+
+.xca-source {
+  margin-bottom: 10px;
+  border: 1px solid #e8e1d7;
+  border-radius: 6px;
+  background: #fbf7ef;
+}
+
+.xca-source summary {
+  cursor: pointer;
+  color: #73675c;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.xca-source .xca-textarea {
+  min-height: 84px;
+  border: 0;
+  border-top: 1px solid #e8e1d7;
+  border-radius: 0 0 6px 6px;
+  box-shadow: none;
 }
 
 .xca-card {
@@ -182,11 +280,27 @@
   line-height: 1.3;
 }
 
+.xca-badge.low {
+  background: #e7f6ef;
+  color: #067647;
+}
+
 .xca-card-text {
   margin: 0;
   color: #2f2a24;
   font-size: 14px;
   line-height: 1.52;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.xca-card-translation {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid #e8e1d7;
+  color: #73675c;
+  font-size: 12px;
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
